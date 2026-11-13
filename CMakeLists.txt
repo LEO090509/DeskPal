@@ -20,6 +20,7 @@ add_executable(DeskPal
         src/main.cpp
         src/App.cpp
         src/Pet.cpp
+        src/Win32Window.cpp
 )
 target_link_libraries(DeskPal PRIVATE SFML::Graphics)
 
