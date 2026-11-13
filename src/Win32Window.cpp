@@ -34,5 +34,16 @@ namespace win32
                      SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
 
         ShowWindow(hwnd, SW_SHOW);
+
     }
+
+     sf::FloatRect getWorkArea()
+        {
+            RECT rect{};
+            SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+
+            return sf::FloatRect(
+                {static_cast<float>(rect.left), static_cast<float>(rect.top)},
+                {static_cast<float>(rect.right - rect.left), static_cast<float>(rect.bottom - rect.top)});
+        }
 }

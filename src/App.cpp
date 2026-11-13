@@ -1,31 +1,25 @@
 #include "App.h"
 #include "Win32Window.h"
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
-    constexpr unsigned int kWindowWidth  = 400;
-    constexpr unsigned int kWindowHeight = 300;
     constexpr float kMaxDeltaTime = 0.1f;
-
-    // 이 색으로 칠해진 부분은 투명해진다 (펫 그림에는 이 색을 쓰면 안 됨!)
     const sf::Color kTransparentColor(255, 0, 255);
 }
 
 App::App()
-    : m_window(sf::VideoMode({kWindowWidth, kWindowHeight}), "DeskPal", sf::Style::None)
-    , m_pet({200.f, 150.f})
+    : m_window(sf::VideoMode(Pet::kWindowSize), "DeskPal", sf::Style::None)
+    , m_workArea(win32::getWorkArea())
+    , m_lastWindowPos({-1, -1})
+    // 시작 위치: 화면 위쪽 가운데 (여기서 떨어지기 시작)
+    , m_pet({m_workArea.position.x + m_workArea.size.x / 2.f,
+             m_workArea.position.y + static_cast<float>(Pet::kWindowSize.y)})
 {
     m_window.setFramerateLimit(60);
-
-    // 화면 가운데에 배치
-    const sf::Vector2u desktop = sf::VideoMode::getDesktopMode().size;
-    m_window.setPosition({
-        static_cast<int>(desktop.x - kWindowWidth) / 2,
-        static_cast<int>(desktop.y - kWindowHeight) / 2
-    });
-
     win32::makeDesktopPetWindow(m_window, kTransparentColor);
+    syncWindowToPet();
 }
 
 void App::run()
@@ -51,13 +45,11 @@ void App::processEvents()
         {
             m_window.close();
         }
-        // 닫기 버튼이 없으므로 임시 종료 방법 ①: ESC 키
         else if (const auto* key = event->getIf<sf::Event::KeyPressed>())
         {
             if (key->code == sf::Keyboard::Key::Escape)
                 m_window.close();
         }
-        // 임시 종료 방법 ②: 펫을 우클릭 (STEP 8에서 우클릭 메뉴로 교체)
         else if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>())
         {
             if (mouse->button == sf::Mouse::Button::Right)
@@ -68,13 +60,29 @@ void App::processEvents()
 
 void App::update(float dt)
 {
-    const sf::Vector2f bounds(m_window.getSize());
-    m_pet.update(dt, bounds);
+    m_pet.update(dt, m_workArea);
+    syncWindowToPet();
+}
+
+void App::syncWindowToPet()
+{
+    // 발 위치(아래쪽 가운데) → 창의 왼쪽 위 좌표로 변환
+    const sf::Vector2f feet = m_pet.getFeetPosition();
+    const sf::Vector2i newPos(
+        static_cast<int>(std::round(feet.x - Pet::kWindowSize.x / 2.f)),
+        static_cast<int>(std::round(feet.y - Pet::kWindowSize.y)));
+
+    // 위치가 바뀌었을 때만 창 이동 (불필요한 Windows 호출 줄이기)
+    if (newPos != m_lastWindowPos)
+    {
+        m_window.setPosition(newPos);
+        m_lastWindowPos = newPos;
+    }
 }
 
 void App::render()
 {
-    m_window.clear(kTransparentColor);   // 배경 = 투명색
+    m_window.clear(kTransparentColor);
     m_pet.render(m_window);
     m_window.display();
 }

@@ -2,19 +2,23 @@
 #include <SFML/Graphics.hpp>
 #include "Pet.h"
 
-// 프로그램 전체를 조립하고 게임 루프를 돌리는 클래스
 class App
 {
 public:
     App();
-    void run();   // 게임 루프 시작 (창이 닫힐 때까지 반환되지 않음)
+    void run();
 
 private:
-    void processEvents();     // ① 입력 처리
-    void update(float dt);    // ② 상태 계산
-    void render();            // ③ 화면 그리기
+    void processEvents();
+    void update(float dt);
+    void render();
+
+    // 펫의 발 위치에 맞춰 창을 이동
+    void syncWindowToPet();
 
     sf::RenderWindow m_window;
     sf::Clock m_clock;
+    sf::FloatRect m_workArea;     // 돌아다닐 수 있는 화면 영역
+    sf::Vector2i m_lastWindowPos; // 마지막으로 옮긴 창 위치
     Pet m_pet;
 };

@@ -10,4 +10,6 @@ namespace win32
     //  - 항상 다른 창 위에 표시
     //  - 작업표시줄과 Alt+Tab 목록에서 숨김
     void makeDesktopPetWindow(sf::RenderWindow& window, sf::Color colorKey);
+    // 주 모니터의 작업 영역 (화면에서 작업표시줄을 뺀 영역, 화면 좌표)
+    sf::FloatRect getWorkArea();
 }
