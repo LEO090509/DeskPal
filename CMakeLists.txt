@@ -16,7 +16,11 @@ FetchContent_Declare(SFML
 FetchContent_MakeAvailable(SFML)
 
 # 실행 파일
-add_executable(DeskPal src/main.cpp)
+add_executable(DeskPal 
+        src/main.cpp
+        src/App.cpp
+        src/Pet.cpp
+)
 target_link_libraries(DeskPal PRIVATE SFML::Graphics)
 
 # 소스 파일을 UTF-8로 읽기 (한글 주석/문자열 깨짐 방지)
