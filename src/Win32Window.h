@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <filesystem>
 
 // Windows 전용 창 기능 모음
 // (Win32 API는 이 파일들 안에서만 사용한다)
@@ -12,4 +13,6 @@ namespace win32
     void makeDesktopPetWindow(sf::RenderWindow& window, sf::Color colorKey);
     // 주 모니터의 작업 영역 (화면에서 작업표시줄을 뺀 영역, 화면 좌표)
     sf::FloatRect getWorkArea();
+     // 실행 파일(.exe)이 있는 폴더 경로
+    std::filesystem::path getExecutableDir();
 }

@@ -20,9 +20,18 @@ add_executable(DeskPal
         src/main.cpp
         src/App.cpp
         src/Pet.cpp
+        src/Animator.cpp
         src/Win32Window.cpp
 )
 target_link_libraries(DeskPal PRIVATE SFML::Graphics)
+
+# 빌드할 때마다 assets 폴더를 실행 파일 옆으로 복사
+add_custom_target(copy_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:DeskPal>/assets
+)
+add_dependencies(DeskPal copy_assets)
 
 # 소스 파일을 UTF-8로 읽기 (한글 주석/문자열 깨짐 방지)
 if(MSVC)

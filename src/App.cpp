@@ -8,10 +8,12 @@ namespace
     constexpr float kMaxDeltaTime = 0.1f;
     const sf::Color kTransparentColor(255, 0, 255);
 
-    constexpr float kDragThreshold     = 4.f;   // 이만큼(px) 움직여야 드래그로 판정
-    constexpr float kVelocitySmoothing = 0.5f;  // 던지기 속도를 부드럽게 (0~1)
+    constexpr float kDragThreshold     = 4.f;
+    constexpr float kVelocitySmoothing = 0.5f;
 
-    // 마우스 위치 (화면 좌표)
+    // 캐릭터 시트 파일 (햄스터로 바꾸려면 "mochi_hamster_sheet.png")
+    constexpr const char* kCharacterSheet = "kitten_sheet.png";
+
     sf::Vector2f getMouseScreenPosition()
     {
         return sf::Vector2f(sf::Mouse::getPosition());
@@ -22,8 +24,11 @@ App::App()
     : m_window(sf::VideoMode(Pet::kWindowSize), "DeskPal", sf::Style::None)
     , m_workArea(win32::getWorkArea())
     , m_lastWindowPos({-1, -1})
+    // exe 옆 assets 폴더에서 시트 불러오기 (실패하면 예외 발생 → main에서 처리)
+    , m_sheet(win32::getExecutableDir() / "assets" / kCharacterSheet)
     , m_pet({m_workArea.position.x + m_workArea.size.x / 2.f,
-             m_workArea.position.y + static_cast<float>(Pet::kWindowSize.y)})
+             m_workArea.position.y + static_cast<float>(Pet::kWindowSize.y)},
+            m_sheet)
 {
     m_window.setFramerateLimit(60);
     win32::makeDesktopPetWindow(m_window, kTransparentColor);
@@ -63,7 +68,7 @@ void App::processEvents()
             if (mouse->button == sf::Mouse::Button::Left)
                 beginPress();
             else if (mouse->button == sf::Mouse::Button::Right)
-                m_window.close();   // 임시 종료 (STEP 8에서 메뉴로 교체)
+                m_window.close();
         }
     }
 }
@@ -76,7 +81,7 @@ void App::beginPress()
     m_isDragging = false;
     m_pressMousePos = mouse;
     m_prevMousePos = mouse;
-    m_grabOffset = m_pet.getFeetPosition() - mouse;   // 잡은 지점 유지용
+    m_grabOffset = m_pet.getFeetPosition() - mouse;
     m_mouseVelocity = {0.f, 0.f};
 }
 
@@ -87,14 +92,12 @@ void App::updateMouse(float dt)
 
     const sf::Vector2f mouse = getMouseScreenPosition();
 
-    // 1. 일정 거리 이상 움직이면 드래그 시작
     if (!m_isDragging && (mouse - m_pressMousePos).length() > kDragThreshold)
     {
         m_isDragging = true;
         m_pet.grab();
     }
 
-    // 2. 드래그 중: 펫을 마우스에 붙이고, 마우스 속도 측정
     if (m_isDragging)
     {
         m_pet.moveHeld(mouse + m_grabOffset);
@@ -107,13 +110,12 @@ void App::updateMouse(float dt)
     }
     m_prevMousePos = mouse;
 
-    // 3. 버튼을 뗐는지 확인 (창 밖에서 떼도 감지되도록 실시간 상태로 확인)
     if (!sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
     {
         if (m_isDragging)
-            m_pet.release(m_mouseVelocity);   // 던지기
+            m_pet.release(m_mouseVelocity);
         else
-            m_pet.poke();                     // 그냥 클릭 → 폴짝
+            m_pet.poke();
 
         m_isPressing = false;
         m_isDragging = false;
