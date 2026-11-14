@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <cstddef>
 #include "Pet.h"
 
 class App
@@ -18,11 +19,16 @@ private:
     void beginPress();
     void updateMouse(float dt);
 
+    // --- 우클릭 메뉴 ---
+    void openContextMenu();
+    bool loadCharacter(std::size_t index);   // 실패하면 false (기존 캐릭터 유지)
+
     sf::RenderWindow m_window;
     sf::Clock m_clock;
     sf::FloatRect m_workArea;
     sf::Vector2i m_lastWindowPos;
-    sf::Texture m_sheet;            // 캐릭터 스프라이트 시트 (Pet보다 먼저 선언!)
+    std::size_t m_characterIndex = 0;   // 현재 캐릭터 번호 (m_sheet보다 먼저!)
+    sf::Texture m_sheet;                // 현재 캐릭터 시트 (m_pet보다 먼저!)
     Pet m_pet;
 
     bool m_isPressing = false;

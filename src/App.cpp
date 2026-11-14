@@ -2,6 +2,9 @@
 #include "Win32Window.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
 
 namespace
 {
@@ -11,8 +14,39 @@ namespace
     constexpr float kDragThreshold     = 4.f;
     constexpr float kVelocitySmoothing = 0.5f;
 
-    // 캐릭터 시트 파일 (햄스터로 바꾸려면 "mochi_hamster_sheet.png")
-    constexpr const char* kCharacterSheet = "kitten_sheet.png";
+    // 선택할 수 있는 캐릭터 목록 {메뉴 이름, 시트 파일}
+    struct Character
+    {
+        const wchar_t* name;
+        const char* file;
+    };
+    constexpr Character kCharacters[] = {
+        {L"고양이", "kitten_sheet.png"},
+        {L"햄스터", "mochi_hamster_sheet.png"},
+    };
+    constexpr std::size_t kCharacterCount = std::size(kCharacters);
+
+    // 메뉴 명령 번호 (0은 "선택 안 함"이라 사용하지 않음)
+    enum MenuCommand : int
+    {
+        kCmdSleep = 1,
+        kCmdWake,
+        kCmdQuit,
+        kCmdCharacterBase = 100,   // 100 + 캐릭터 번호
+    };
+
+    std::filesystem::path sheetPath(std::size_t index)
+    {
+        return win32::getExecutableDir() / "assets" / kCharacters[index].file;
+    }
+
+    sf::Texture loadSheet(const std::filesystem::path& path)
+    {
+        sf::Texture texture;
+        if (!texture.loadFromFile(path))
+            throw std::runtime_error("Failed to load: " + path.string());
+        return texture;
+    }
 
     sf::Vector2f getMouseScreenPosition()
     {
@@ -24,8 +58,7 @@ App::App()
     : m_window(sf::VideoMode(Pet::kWindowSize), "DeskPal", sf::Style::None)
     , m_workArea(win32::getWorkArea())
     , m_lastWindowPos({-1, -1})
-    // exe 옆 assets 폴더에서 시트 불러오기 (실패하면 예외 발생 → main에서 처리)
-    , m_sheet(win32::getExecutableDir() / "assets" / kCharacterSheet)
+    , m_sheet(loadSheet(sheetPath(m_characterIndex)))
     , m_pet({m_workArea.position.x + m_workArea.size.x / 2.f,
              m_workArea.position.y + static_cast<float>(Pet::kWindowSize.y)},
             m_sheet)
@@ -58,20 +91,79 @@ void App::processEvents()
         {
             m_window.close();
         }
-        else if (const auto* key = event->getIf<sf::Event::KeyPressed>())
-        {
-            if (key->code == sf::Keyboard::Key::Escape)
-                m_window.close();
-        }
         else if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>())
         {
             if (mouse->button == sf::Mouse::Button::Left)
                 beginPress();
-            else if (mouse->button == sf::Mouse::Button::Right)
-                m_window.close();
+            else if (mouse->button == sf::Mouse::Button::Right && !m_isPressing)
+                openContextMenu();
         }
     }
 }
+
+// ───────────────────────── 우클릭 메뉴 ─────────────────────────
+
+void App::openContextMenu()
+{
+    using win32::MenuItem;
+
+    // 하위 메뉴: 캐릭터 목록 (현재 캐릭터에 ✓)
+    std::vector<MenuItem> characterMenu;
+    for (std::size_t i = 0; i < kCharacterCount; ++i)
+    {
+        MenuItem item;
+        item.id = kCmdCharacterBase + static_cast<int>(i);
+        item.text = kCharacters[i].name;
+        item.checked = (i == m_characterIndex);
+        characterMenu.push_back(item);
+    }
+
+    // 전체 메뉴: {id, 글자, 선택 가능 여부, ✓ 여부, 하위 메뉴}
+    const std::vector<MenuItem> menu = {
+        {kCmdSleep, L"재우기", m_pet.isOnGround() && !m_pet.isSleeping()},
+        {kCmdWake,  L"깨우기", m_pet.isSleeping()},
+        {},                                              // 구분선
+        {0, L"캐릭터 바꾸기", true, false, characterMenu},
+        {},                                              // 구분선
+        {kCmdQuit,  L"종료"},
+    };
+
+    const int command = win32::showPopupMenu(m_window, menu);
+
+    if (command == kCmdSleep)
+        m_pet.sleep();
+    else if (command == kCmdWake)
+        m_pet.wakeUp();
+    else if (command == kCmdQuit)
+        m_window.close();
+    else if (command >= kCmdCharacterBase &&
+             command < kCmdCharacterBase + static_cast<int>(kCharacterCount))
+        loadCharacter(static_cast<std::size_t>(command - kCmdCharacterBase));
+
+    // 메뉴가 떠 있던 시간만큼 dt가 튀지 않도록 시계 초기화
+    m_clock.restart();
+}
+
+bool App::loadCharacter(std::size_t index)
+{
+    if (index == m_characterIndex)
+        return true;
+
+    try
+    {
+        // 같은 m_sheet 자리에 새 텍스처를 덮어씀 → Pet의 스프라이트가 자동으로 새 그림 사용
+        m_sheet = loadSheet(sheetPath(index));
+        m_characterIndex = index;
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "[Error] " << e.what() << '\n';   // 실패 시 기존 캐릭터 유지
+        return false;
+    }
+}
+
+// ───────────────────────── 마우스 드래그 ─────────────────────────
 
 void App::beginPress()
 {
@@ -121,6 +213,8 @@ void App::updateMouse(float dt)
         m_isDragging = false;
     }
 }
+
+// ───────────────────────── 루프 ─────────────────────────
 
 void App::update(float dt)
 {

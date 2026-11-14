@@ -86,7 +86,6 @@ void Pet::update(float dt, const sf::FloatRect& area)
     case State::Held:  break;
     }
 
-    // 현재 상태의 애니메이션 재생 (같은 애니메이션이면 이어서)
     m_animator.play(animationFor(m_state));
     m_animator.update(dt);
     updateSprite();
@@ -248,7 +247,7 @@ const Animation& Pet::animationFor(State state)
 void Pet::updateSprite()
 {
     m_sprite.setTextureRect(m_animator.getFrameRect());
-    m_sprite.setScale({kSpriteScale * m_facing, kSpriteScale});   // 왼쪽을 보면 좌우 반전
+    m_sprite.setScale({kSpriteScale * m_facing, kSpriteScale});
 }
 
 void Pet::render(sf::RenderTarget& target) const
@@ -293,6 +292,20 @@ void Pet::poke()
     changeState(State::Fall);
 }
 
+void Pet::sleep()
+{
+    if (!isOnGround() || m_state == State::Sleep)
+        return;   // 공중에 있거나 이미 자고 있으면 무시
+
+    changeState(State::Sleep);
+}
+
+void Pet::wakeUp()
+{
+    if (m_state == State::Sleep)
+        changeState(State::Idle);
+}
+
 // ───────────────────────── 기타 ─────────────────────────
 
 sf::Vector2f Pet::getFeetPosition() const
@@ -303,6 +316,11 @@ sf::Vector2f Pet::getFeetPosition() const
 bool Pet::isHeld() const
 {
     return m_state == State::Held;
+}
+
+bool Pet::isSleeping() const
+{
+    return m_state == State::Sleep;
 }
 
 float Pet::randomRange(float min, float max)
