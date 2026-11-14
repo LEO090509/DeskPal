@@ -16,6 +16,13 @@ namespace
     constexpr float kFloorBounce    = 0.35f;
     constexpr float kMinBounceSpeed = 400.f;
 
+        // --- 활강 (날다람쥐 전용) ---
+    constexpr float kGlideGravity      = 400.f;   // 활강 중 중력
+    constexpr float kGlideMaxFallSpeed = 90.f;    // 활강 중 최대 낙하 속도
+    constexpr float kGlideBrake        = 4.f;     // 빠르게 떨어질 때 감속하는 빠르기
+    constexpr float kGlideSpeed        = 140.f;   // 활강 중 앞으로 나아가는 속도
+    constexpr float kGlideSteer        = 2.f;     // 가로 속도가 활강 속도에 맞춰지는 빠르기
+
     // --- 상태별 지속 시간 (초) ---
     struct Range { float min, max; };
     constexpr Range kIdleTime  {1.5f, 4.f};
@@ -185,11 +192,27 @@ void Pet::updateSleep(float dt)
 
 void Pet::updateFall(float dt, const sf::FloatRect& area)
 {
-    const Limits lim = computeLimits(area);
+       const Limits lim = computeLimits(area);
 
-    m_velocity.y = std::min(m_velocity.y + kGravity * dt, kMaxFallSpeed);
-    m_velocity.x -= m_velocity.x * kAirDrag * dt;
+    // 날다람쥐가 내려가는 중이면 활강
+    const bool gliding = m_canGlide && m_velocity.y > 0.f;
 
+    if (gliding)
+    {
+        // 세로: 너무 빠르면 부드럽게 감속, 아니면 약한 중력
+        if (m_velocity.y > kGlideMaxFallSpeed)
+            m_velocity.y += (kGlideMaxFallSpeed - m_velocity.y) * std::min(kGlideBrake * dt, 1.f);
+        else
+            m_velocity.y = std::min(m_velocity.y + kGlideGravity * dt, kGlideMaxFallSpeed);
+
+        // 가로: 바라보는 방향으로 일정한 속도로 미끄러지듯
+        m_velocity.x += (m_facing * kGlideSpeed - m_velocity.x) * std::min(kGlideSteer * dt, 1.f);
+    }
+    else
+    {
+        m_velocity.y = std::min(m_velocity.y + kGravity * dt, kMaxFallSpeed);
+        m_velocity.x -= m_velocity.x * kAirDrag * dt;
+    }
     m_position += m_velocity * dt;
 
     if (m_position.x < lim.left)
@@ -306,6 +329,10 @@ void Pet::wakeUp()
         changeState(State::Idle);
 }
 
+void Pet::setCanGlide(bool canGlide)
+{
+    m_canGlide = canGlide;
+}
 // ───────────────────────── 기타 ─────────────────────────
 
 sf::Vector2f Pet::getFeetPosition() const

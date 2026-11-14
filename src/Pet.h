@@ -21,6 +21,7 @@ public:
     void poke();
     void sleep();     // 메뉴: 재우기 (바닥에 있을 때만)
     void wakeUp();    // 메뉴: 깨우기
+    void setCanGlide(bool canGlide);   // 활강 가능한 캐릭터인가 (날다람쥐)
 
     sf::Vector2f getFeetPosition() const;
     bool isHeld() const;
@@ -55,5 +56,6 @@ private:
     sf::Sprite m_sprite;
     Animator m_animator;
 
+    bool m_canGlide = false;
     std::mt19937 m_rng;
 };

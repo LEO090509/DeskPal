@@ -19,10 +19,12 @@ namespace
     {
         const wchar_t* name;
         const char* file;
+        bool canGlide;
     };
     constexpr Character kCharacters[] = {
-        {L"고양이", "kitten_sheet.png"},
-        {L"햄스터", "mochi_hamster_sheet.png"},
+        {L"고양이", "kitten_sheet.png", false},
+        {L"햄스터", "mochi_hamster_sheet.png", false},
+        {L"날다람쥐", "flying_squirrel_sheet.png", true}
     };
     constexpr std::size_t kCharacterCount = std::size(kCharacters);
 
@@ -65,6 +67,7 @@ App::App()
 {
     m_window.setFramerateLimit(60);
     win32::makeDesktopPetWindow(m_window, kTransparentColor);
+    m_pet.setCanGlide(kCharacters[m_characterIndex].canGlide);
     syncWindowToPet();
 }
 
@@ -154,6 +157,7 @@ bool App::loadCharacter(std::size_t index)
         // 같은 m_sheet 자리에 새 텍스처를 덮어씀 → Pet의 스프라이트가 자동으로 새 그림 사용
         m_sheet = loadSheet(sheetPath(index));
         m_characterIndex = index;
+        m_pet.setCanGlide(kCharacters[index].canGlide);
         return true;
     }
     catch (const std::exception& e)
