@@ -113,7 +113,7 @@ void App::updateMouse(float dt)
         if (m_isDragging)
             m_pet.release(m_mouseVelocity);   // 던지기
         else
-            m_pet.jump();                     // 그냥 클릭 → 폴짝
+            m_pet.poke();                     // 그냥 클릭 → 폴짝
 
         m_isPressing = false;
         m_isDragging = false;
